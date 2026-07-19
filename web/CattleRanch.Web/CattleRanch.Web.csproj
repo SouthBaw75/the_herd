@@ -1,0 +1,24 @@
+<Project Sdk="Microsoft.NET.Sdk.BlazorWebAssembly">
+
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <!-- Deterministic, locale-independent formatting — matches the console
+         prototype's InvariantCulture policy and shrinks the WASM payload. -->
+    <InvariantGlobalization>true</InvariantGlobalization>
+    <!-- IL trimming would strip the non-public setters RanchSave's contract
+         resolver writes through (D8). A prototype doesn't need the size win. -->
+    <PublishTrimmed>false</PublishTrimmed>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly" Version="8.0.29" />
+    <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly.DevServer" Version="8.0.29" PrivateAssets="all" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\sim\src\CattleRanch.Sim\CattleRanch.Sim.csproj" />
+  </ItemGroup>
+
+</Project>

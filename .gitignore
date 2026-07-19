@@ -49,9 +49,11 @@ Thumbs.db
 *.swp
 *~
 
-# ---- Keep the tracked sim solution & project files ----
+# ---- Keep the tracked sim + web solution & project files ----
+# (the blanket *.csproj ignore above is for Unity's auto-generated ones only)
 !sim/**/*.csproj
 !sim/**/*.sln
+!web/**/*.csproj
 
 # ---- Generated sim DLL synced into Unity (built by unity/sync-sim.sh; D7) ----
 unity/Assets/CattleRanch/Plugins/CattleRanch.Sim.dll

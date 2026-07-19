@@ -5,4 +5,17 @@
     <Nullable>enable</Nullable>
   </PropertyGroup>
 
+  <ItemGroup>
+    <!--
+      In Unity this resolves against com.unity.nuget.newtonsoft-json (same
+      assembly identity), so the DLL-in-Plugins approach (D7) is unaffected.
+    -->
+    <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- Tests exercise internal setters to stage non-default state for save/load round-trips. -->
+    <InternalsVisibleTo Include="CattleRanch.Sim.Tests" />
+  </ItemGroup>
+
 </Project>

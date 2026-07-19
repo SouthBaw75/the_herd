@@ -13,7 +13,13 @@ Settled choices. Do not relitigate without a new entry that supersedes an old on
 
 | D7 | 2026-07-19 | Unity references the sim as a **precompiled DLL** in `Assets/CattleRanch/Plugins/`, **generated locally** (never committed; gitignored). One-command sync: `unity/sync-sim.sh`. | Keeps `sim/` free of Unity files, enforces the sim/presentation split at the compiler level, avoids binary churn in git. Revisit if the rebuild step becomes friction. |
 
+| D8 | 2026-07-19 | Save/load goes through **`RanchSave.ToJson/FromJson`** (in `CattleRanch.Sim.Persistence`) — a single entry point owning the serializer settings, with a contract resolver that writes non-public setters and a converter storing `GameDate` as bare `TotalDays`. No `[JsonProperty]` attributes on domain types; `internal set` encapsulation stays. | Json.NET's default contract silently skips internal setters — a load restored default values (caught in lead verification, then fixed + regression-tested). Centralizing policy prevents consumers from misconfiguring a serializer and quietly corrupting saves. |
+
 ## Open questions (raise before they block)
+- Cross-**runtime** determinism of `NextGaussian` (Box-Muller uses `Math.Log/Cos`;
+  transcendentals are deterministic on a given runtime but not guaranteed
+  bit-identical across runtimes/architectures). Irrelevant while saves stay
+  on-device; revisit only if cross-platform save sharing or replays ship.
 - Exact daily intake (kg DM/head) and carrying-capacity formula constants — will
   be set as *tunable config* in Phase 1 balancing, not hardcoded.
 - Serialization of `decimal Cash` under Newtonsoft in Unity's IL2CPP — verify in

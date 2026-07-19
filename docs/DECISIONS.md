@@ -20,6 +20,8 @@ Settled choices. Do not relitigate without a new entry that supersedes an old on
 
 | D11 | 2026-07-19 | **Amends D9:** the Phase 0 Unity editor exit test moves back up — the owner (Unity 6.5 now installed) sets up the starter scene NOW with guided help, alongside (not instead of) the terminal fun-gate playtest. Art/gameplay in Unity remains Phase 3; the fun gate remains binding. | Owner wants something visual; the Phase 0 scene is already-sanctioned work that provides it without violating the prove-the-fun-first gate. |
 
+| D12 | 2026-07-19 | The fun-gate prototype gets a **browser version: Blazor WebAssembly** (`web/`) compiling the unmodified `CattleRanch.Sim` to WASM. The terminal prototype stays; Unity remains the product target (paused at the owner's request, resumed later). NO parallel JS sim — the C# sim stays the single source of truth in every frontend. | Owner found both the terminal and the Unity editor unfriendly; a click-and-play web UI serves the fun gate better for this playtester. WASM feasibility verified in-container (template + runtime packs + static publish all work). |
+
 ## Open questions (raise before they block)
 - Cross-**runtime** determinism of `NextGaussian` (Box-Muller uses `Math.Log/Cos`;
   transcendentals are deterministic on a given runtime but not guaranteed

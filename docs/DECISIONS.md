@@ -11,6 +11,8 @@ Settled choices. Do not relitigate without a new entry that supersedes an old on
 | D5 | 2026-07-19 | **Newtonsoft Json.NET** for `RanchState` save/load (over `JsonUtility`). | Handles dictionaries, polymorphism, and private setters; testable headlessly; Unity package `com.unity.nuget.newtonsoft-json` exists. |
 | D6 | 2026-07-19 | **Tick = 1 day; 28 days/season; 112 days/year** (config constants, not literals). | Simple, even seasons; deterministic; tunable via config. |
 
+| D7 | 2026-07-19 | Unity references the sim as a **precompiled DLL** in `Assets/CattleRanch/Plugins/`, **generated locally** (never committed; gitignored). One-command sync: `unity/sync-sim.sh`. | Keeps `sim/` free of Unity files, enforces the sim/presentation split at the compiler level, avoids binary churn in git. Revisit if the rebuild step becomes friction. |
+
 ## Open questions (raise before they block)
 - Exact daily intake (kg DM/head) and carrying-capacity formula constants — will
   be set as *tunable config* in Phase 1 balancing, not hardcoded.

@@ -52,3 +52,6 @@ Thumbs.db
 # ---- Keep the tracked sim solution & project files ----
 !sim/**/*.csproj
 !sim/**/*.sln
+
+# ---- Generated sim DLL synced into Unity (built by unity/sync-sim.sh; D7) ----
+unity/Assets/CattleRanch/Plugins/CattleRanch.Sim.dll

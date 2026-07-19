@@ -58,3 +58,8 @@ unity/Assets/CattleRanch/Plugins/CattleRanch.Sim.dll
 
 # ---- Prototype save files (created wherever the console game runs) ----
 ranch-save.json
+
+# ---- Web (Blazor) build output ----
+web/**/bin/
+web/**/obj/
+web/**/pub/

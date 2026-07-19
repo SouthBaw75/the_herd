@@ -1,0 +1,757 @@
+@page "/"
+@using System.Globalization
+@using CattleRanch.Sim
+@using CattleRanch.Sim.Persistence
+@using CattleRanch.Sim.Systems
+@inject IJSRuntime JS
+
+<PageTitle>Cattle Ranch (prototype)</PageTitle>
+
+@if (_screen == Screen.Start)
+{
+    <div class="start-wrap">
+        <div class="start-card">
+            <h1 class="start-title">CATTLE RANCH <span class="proto-tag">(prototype)</span></h1>
+            <p class="premise">You inherit a run-down ranch: one paddock, ten head, and $15,000 in the bank. One recurring question — should you sell now?</p>
+            <label class="seed-label" for="seed-input">World seed</label>
+            <input id="seed-input" class="seed-input" @bind="_seedText" @bind:event="oninput" />
+            <p class="seed-hint">Same seed, same ranch — a web run matches a console run.</p>
+            <button id="start-btn" class="btn primary big" @onclick="StartRanching">Start Ranching</button>
+            @if (_hasSave)
+            {
+                <button id="load-save-btn" class="btn big" @onclick="LoadClicked">Load Save</button>
+            }
+            @if (_loadError != null)
+            {
+                <p class="load-error">@_loadError</p>
+            }
+        </div>
+    </div>
+}
+else if (_state != null)
+{
+    <div class="game @(_screen == Screen.GameOver ? "blurred" : "")">
+        <header class="topbar">
+            <div class="stat date-stat">
+                <span class="stat-label">Week @WeekNumber</span>
+                <span id="date-value" class="stat-value">Year @_state.Date.Year · @_state.Date.Season · Day @_state.Date.DayOfSeason/@GameDate.DaysPerSeason</span>
+                <div class="minibar" title="Season progress">
+                    <div class="minibar-fill" style="width: @Pct((double)_state.Date.DayOfSeason / GameDate.DaysPerSeason)%"></div>
+                </div>
+            </div>
+            <div class="stat weather-stat">
+                <span class="stat-label">Weather</span>
+                <span id="weather-value" class="stat-value">@WeatherEmoji() @WeatherLine()</span>
+            </div>
+            <div class="stat cash-stat">
+                <span class="stat-label">Cash</span>
+                <span id="cash-value" class="stat-value">@Money(_state.Cash)</span>
+            </div>
+            <div class="stat herd-stat">
+                <span class="stat-label">Herd</span>
+                <span id="herd-count" class="stat-value">🐄 @_state.Herd.Count head</span>
+            </div>
+            <div class="topbar-actions">
+                <button id="save-btn" class="btn small" @onclick="SaveClicked">Save</button>
+                <button id="load-btn" class="btn small" @onclick="LoadClicked" disabled="@(!_hasSave)">Load</button>
+                @if (_saveNote != null)
+                {
+                    <span class="save-note">@_saveNote</span>
+                }
+            </div>
+        </header>
+
+        @if (_state.Date.Season == Season.Winter)
+        {
+            <div id="winter-banner" class="winter-banner">
+                ❄️ <strong>WINTER:</strong> grass stops growing until spring; upkeep does not. What's standing in the paddock is the feed you've got.
+            </div>
+        }
+
+        <div class="main-grid">
+            <div class="col left-col">
+                <section class="card pasture-card">
+                    <h2>Pasture <span class="card-sub">P-0 · 12 ha</span></h2>
+                    <div class="bar-row">
+                        <span class="bar-label">Grass</span>
+                        <div class="bar"><div class="bar-fill grass" style="width: @Pct(GrassFraction())%"></div></div>
+                        <span id="grass-pct" class="bar-value">@Pct(GrassFraction())% of capacity</span>
+                    </div>
+                    <div class="bar-row">
+                        <span class="bar-label">Soil</span>
+                        <div class="bar"><div class="bar-fill soil" style="width: @Pct(SoilHealth())%"></div></div>
+                        <span class="bar-value">@Pct(SoilHealth())%</span>
+                    </div>
+                    <p class="pasture-heads">@HeadsOnPasture() head on pasture</p>
+                </section>
+
+                <section class="card market-card">
+                    <h2>Market</h2>
+                    <div class="price-big" id="price-value">@Money(PricePerKg)<span class="per-kg">/kg</span></div>
+                    @{ var pts = ChartPoints(); }
+                    @if (pts.Length > 0)
+                    {
+                        <svg class="price-chart" viewBox="0 0 240 64" preserveAspectRatio="none" role="img" aria-label="Recent weekly prices">
+                            <polyline points="@pts" fill="none" stroke="#6a994e" stroke-width="2" />
+                        </svg>
+                    }
+                    else
+                    {
+                        <div class="price-chart chart-empty">building price history…</div>
+                    }
+                    <div class="chart-caption">last @ChartWindow().Count wk · low @Money(ChartMin()) — high @Money(ChartMax())</div>
+                    <p class="market-hint">@MarketHint()</p>
+                    <p id="runway-line" class="runway">@RunwayLine()</p>
+                </section>
+            </div>
+
+            <section class="card herd-card">
+                <h2>Herd <span class="card-sub">click a name to rename · worth @Money(HerdValue()) at today's prices</span></h2>
+                <div class="herd-scroll">
+                    <table class="herd-table">
+                        <thead>
+                            <tr><th>Name / ID</th><th>Sex</th><th>Age</th><th>Weight</th><th></th><th class="num">Quote</th><th></th></tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var animal in _state.Herd)
+                            {
+                                var a = animal;
+                                <tr>
+                                    <td class="name-cell">
+                                        @if (_renamingId == a.Id)
+                                        {
+                                            <input @ref="_renameInput" class="rename-input" @bind="_renameText" @bind:event="oninput"
+                                                   @onkeydown="e => RenameKey(e, a)" @onblur="() => CommitRename(a)" />
+                                        }
+                                        else
+                                        {
+                                            <button class="name-btn" title="Rename" @onclick="() => BeginRename(a)">@DisplayName(a)</button>
+                                        }
+                                    </td>
+                                    <td>@SexIcon(a) @SexLabel(a)</td>
+                                    <td>@(a.AgeDays / GameDate.DaysPerSeason) sns</td>
+                                    <td>@a.WeightKg.ToString("F0", Inv) kg</td>
+                                    <td class="preg-cell">@(a.Pregnancy.IsPregnant ? "🤰" : "")</td>
+                                    <td class="num">@Money(Quote(a))</td>
+                                    <td><button class="btn sell-btn" @onclick="() => AskSell(a)">Sell</button></td>
+                                </tr>
+                            }
+                            @if (_state.Herd.Count == 0)
+                            {
+                                <tr><td colspan="7" class="empty-herd">The herd is empty. The paddock is very quiet.</td></tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+                <button id="advance-btn" class="btn primary advance-btn" @onclick="AdvanceWeek">Advance 1 Week ▶</button>
+            </section>
+
+            <section class="col reports-col">
+                <h2 class="reports-title">Week reports</h2>
+                @if (_reports.Count == 0)
+                {
+                    <div class="card report dim"><p class="report-line">No weeks on the books yet. Hit <em>Advance 1 Week</em>.</p></div>
+                }
+                @for (int i = 0; i < _reports.Count; i++)
+                {
+                    var r = _reports[i];
+                    <div class="card report @(i == 0 ? "latest" : "dim")">
+                        <h3>Week @r.Week@(r.DaysRun < 7 ? $" ({r.DaysRun} days)" : "")</h3>
+                        @if (r.Events.Count == 0 && r.Births.Count == 0)
+                        {
+                            <p class="report-line">• Quiet week. The weather held.</p>
+                        }
+                        @foreach (var e in r.Events)
+                        {
+                            <p class="report-line">• @e</p>
+                        }
+                        @foreach (var b in r.Births)
+                        {
+                            <p class="report-line birth">• 🐄 A calf was born! @b joins the herd.</p>
+                        }
+                        @if (r.HerdEmpty)
+                        {
+                            <p class="report-line">• Herd: empty. The overhead bills arrive anyway.</p>
+                        }
+                        else
+                        {
+                            <p class="report-line">• Herd: avg @r.AvgWeight.ToString("F0", Inv) kg (@Signed(r.AvgDelta) kg this week) @Trend(r.AvgDelta, 0.05)</p>
+                        }
+                        <p class="report-line">• Grass: @Pct(r.GrassFrac)% of capacity @Trend(r.GrassFrac - r.PreGrassFrac, 0.001) (was @Pct(r.PreGrassFrac)%)</p>
+                        <p class="report-line">• Price: @Money(r.PrePrice)/kg → @Money(r.Price)/kg @Trend((double)(r.Price - r.PrePrice), 0.001)</p>
+                        <p class="report-line">• Cash: @Money(r.PreCash) → @Money(r.Cash) (@Money(r.Cash - r.PreCash))</p>
+                    </div>
+                }
+            </section>
+        </div>
+    </div>
+
+    @if (_pendingSale != null)
+    {
+        <div class="modal-backdrop">
+            <div id="confirm-modal" class="modal-card">
+                <p class="confirm-text">Sell @DisplayName(_pendingSale) (@SexLabel(_pendingSale), @_pendingSale.WeightKg.ToString("F0", Inv) kg) for <strong>@Money(Quote(_pendingSale))</strong>?</p>
+                <div class="modal-actions">
+                    <button id="confirm-sell-btn" class="btn primary" @onclick="ConfirmSell">Sell</button>
+                    <button id="cancel-sell-btn" class="btn" @onclick="() => _pendingSale = null">Keep</button>
+                </div>
+            </div>
+        </div>
+    }
+
+    @if (_screen == Screen.GameOver)
+    {
+        <div class="modal-backdrop dark">
+            <div id="game-over" class="gameover-card">
+                <h1>THE BANK HAS FORECLOSED</h1>
+                <p>The ranch lasted <strong>@YearsSurvived full year@(YearsSurvived == 1 ? "" : "s")</strong> and <strong>@WeeksIntoYear week@(WeeksIntoYear == 1 ? "" : "s")</strong>.</p>
+                <p>Final herd: @_state.Herd.Count head, sold at the gate for less than they were worth.</p>
+                <p>Final cash: @Money(_state.Cash).</p>
+                <p class="closing-line">The land will recover. It always does.</p>
+                <button id="start-over-btn" class="btn primary big" @onclick="StartOver">Start Over</button>
+            </div>
+        </div>
+    }
+}
+
+@code {
+    private const string SaveKey = "cattle-ranch-save";
+    private const int DaysPerWeek = 7;
+    private const int ChartWeeks = 12;
+    private const int MaxHistory = 16;
+    private const int MaxReports = 3;
+
+    private static readonly CultureInfo Inv = CultureInfo.InvariantCulture;
+
+    private enum Screen { Start, Playing, GameOver }
+
+    // The one simulation engine (SimConfig.Default) — all game logic lives in
+    // CattleRanch.Sim (D12); this page is presentation and bookkeeping only.
+    private readonly SimulationEngine _engine = new();
+    private RanchState? _state;
+    private Screen _screen = Screen.Start;
+
+    private string _seedText = WebNewGame.DefaultSeed.ToString(CultureInfo.InvariantCulture);
+    private bool _hasSave;
+    private string? _loadError;
+    private string? _saveNote;
+
+    // Play-layer trackers only — deliberately NOT sim state, reset on load
+    // (mirrors the console prototype's Game.cs).
+    private readonly List<decimal> _priceHistory = new();
+    private int _lastSampledDay = -1;
+    private readonly List<WeekReport> _reports = new();
+
+    private Animal? _pendingSale;
+    private string? _renamingId;
+    private string _renameText = string.Empty;
+    private bool _focusRename;
+    private ElementReference _renameInput;
+
+    private MarketConfig MarketCfg => _engine.Config.Market;
+    private decimal PricePerKg => _state!.Market.PricePerKg(MarketCfg, _state.Date.Season);
+    private int WeekNumber => _state!.Date.TotalDays / DaysPerWeek + 1;
+    private int YearsSurvived => _state!.Date.TotalDays / GameDate.DaysPerYear;
+    private int WeeksIntoYear => _state!.Date.TotalDays % GameDate.DaysPerYear / DaysPerWeek;
+
+    private sealed record WeekReport(
+        int Week, int DaysRun, List<string> Events, List<string> Births,
+        bool HerdEmpty, double AvgWeight, double AvgDelta,
+        double GrassFrac, double PreGrassFrac,
+        decimal PrePrice, decimal Price, decimal PreCash, decimal Cash);
+
+    protected override async Task OnInitializedAsync()
+    {
+        string? existing = await JS.InvokeAsync<string?>("localStorage.getItem", SaveKey);
+        _hasSave = !string.IsNullOrEmpty(existing);
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (_focusRename)
+        {
+            _focusRename = false;
+            await _renameInput.FocusAsync();
+        }
+    }
+
+    // ------------------------------------------------------------------
+    // Lifecycle: start / load / save / game over
+    // ------------------------------------------------------------------
+
+    private void StartRanching()
+    {
+        long seed = long.TryParse(_seedText.Trim(), NumberStyles.Integer, Inv, out long s)
+            ? s
+            : WebNewGame.DefaultSeed;
+        _state = WebNewGame.Create(seed);
+        ResetTrackers();
+        SamplePrice();
+        _loadError = null;
+        _screen = Screen.Playing;
+    }
+
+    private async Task LoadClicked()
+    {
+        string? json = await JS.InvokeAsync<string?>("localStorage.getItem", SaveKey);
+        if (string.IsNullOrEmpty(json))
+        {
+            _loadError = "No save found.";
+            _hasSave = false;
+            return;
+        }
+
+        try
+        {
+            _state = RanchSave.FromJson(json);
+        }
+        catch (Exception)
+        {
+            _loadError = "Could not read the save.";
+            return;
+        }
+
+        // Play-layer trackers do not live in the save; start them over.
+        ResetTrackers();
+        SamplePrice();
+        _loadError = null;
+        _saveNote = "Loaded.";
+        _screen = Screen.Playing;
+    }
+
+    private async Task SaveClicked()
+    {
+        await SaveToStorage();
+        _saveNote = "Saved.";
+    }
+
+    private async Task SaveToStorage()
+    {
+        if (_state == null)
+        {
+            return;
+        }
+
+        await JS.InvokeVoidAsync("localStorage.setItem", SaveKey, RanchSave.ToJson(_state));
+        _hasSave = true;
+    }
+
+    private async Task ClearSave()
+    {
+        await JS.InvokeVoidAsync("localStorage.removeItem", SaveKey);
+        _hasSave = false;
+    }
+
+    private void StartOver()
+    {
+        _state = null;
+        ResetTrackers();
+        _seedText = WebNewGame.DefaultSeed.ToString(Inv);
+        _screen = Screen.Start;
+    }
+
+    private void ResetTrackers()
+    {
+        _priceHistory.Clear();
+        _lastSampledDay = -1;
+        _reports.Clear();
+        _pendingSale = null;
+        _renamingId = null;
+        _saveNote = null;
+    }
+
+    // ------------------------------------------------------------------
+    // Advancing time — 7 × engine.Step, then a week report
+    // ------------------------------------------------------------------
+
+    private async Task AdvanceWeek()
+    {
+        if (_state == null || _screen != Screen.Playing)
+        {
+            return;
+        }
+
+        _pendingSale = null;
+        _renamingId = null;
+        _saveNote = null;
+
+        int week = WeekNumber;
+        double preAvgWeight = AverageWeight();
+        double preGrassFrac = GrassFraction();
+        decimal prePrice = PricePerKg;
+        decimal preCash = _state.Cash;
+
+        var events = new List<string>();
+        var births = new List<string>();
+        WeatherCondition prevCond = _state.Weather.Condition;
+        Season prevSeason = _state.Date.Season;
+        bool broke = false;
+        int daysRun = 0;
+
+        for (int d = 1; d <= DaysPerWeek; d++)
+        {
+            BreedingReport report = _engine.Step(_state);
+            daysRun = d;
+
+            foreach (Animal calf in report.BornToday)
+            {
+                births.Add(calf.Id);
+            }
+
+            WeatherCondition cond = _state.Weather.Condition;
+            if (cond != prevCond)
+            {
+                if (cond != WeatherCondition.Normal)
+                {
+                    events.Add($"Day {d}: {WeatherName(cond)} set in — should last ~{_state.Weather.TotalSpellDays} days.");
+                }
+                else
+                {
+                    events.Add($"Day {d}: the {WeatherName(prevCond).ToLowerInvariant()} broke. Back to fair weather.");
+                }
+
+                prevCond = cond;
+            }
+
+            if (_state.Date.Season != prevSeason)
+            {
+                events.Add($"Day {d}: the season turned — it is now {_state.Date.Season}, Year {_state.Date.Year}.");
+                prevSeason = _state.Date.Season;
+            }
+
+            if (Economy.IsBroke(_state))
+            {
+                broke = true;
+                break;
+            }
+        }
+
+        _reports.Insert(0, new WeekReport(
+            week, daysRun, events, births,
+            _state.Herd.Count == 0, AverageWeight(), AverageWeight() - preAvgWeight,
+            GrassFraction(), preGrassFrac, prePrice, PricePerKg, preCash, _state.Cash));
+        if (_reports.Count > MaxReports)
+        {
+            _reports.RemoveAt(MaxReports);
+        }
+
+        SamplePrice();
+
+        if (broke)
+        {
+            // Foreclosure clears the autosave — no reloading a doomed ranch.
+            await ClearSave();
+            _screen = Screen.GameOver;
+        }
+        else
+        {
+            await SaveToStorage();
+        }
+    }
+
+    // ------------------------------------------------------------------
+    // Selling / renaming
+    // ------------------------------------------------------------------
+
+    private void AskSell(Animal a) => _pendingSale = a;
+
+    private async Task ConfirmSell()
+    {
+        if (_state == null || _pendingSale == null)
+        {
+            return;
+        }
+
+        Economy.SellAnimal(_state, MarketCfg, _pendingSale.Id);
+        _pendingSale = null;
+        await SaveToStorage();
+        _saveNote = null;
+    }
+
+    private void BeginRename(Animal a)
+    {
+        _renamingId = a.Id;
+        _renameText = a.Name;
+        _focusRename = true;
+    }
+
+    private async Task RenameKey(KeyboardEventArgs e, Animal a)
+    {
+        if (e.Key == "Enter")
+        {
+            await CommitRename(a);
+        }
+        else if (e.Key == "Escape")
+        {
+            _renamingId = null;
+        }
+    }
+
+    private async Task CommitRename(Animal a)
+    {
+        if (_renamingId != a.Id)
+        {
+            return;
+        }
+
+        a.Name = _renameText.Trim();
+        _renamingId = null;
+        await SaveToStorage();
+    }
+
+    // ------------------------------------------------------------------
+    // Price history + chart (hand-rolled SVG polyline, no chart library)
+    // ------------------------------------------------------------------
+
+    private void SamplePrice()
+    {
+        if (_state == null || _state.Date.TotalDays == _lastSampledDay)
+        {
+            return;
+        }
+
+        _lastSampledDay = _state.Date.TotalDays;
+        _priceHistory.Add(PricePerKg);
+        if (_priceHistory.Count > MaxHistory)
+        {
+            _priceHistory.RemoveAt(0);
+        }
+    }
+
+    private List<decimal> ChartWindow()
+    {
+        int count = Math.Min(_priceHistory.Count, ChartWeeks);
+        return _priceHistory.GetRange(_priceHistory.Count - count, count);
+    }
+
+    private decimal ChartMin() { var w = ChartWindow(); return w.Count == 0 ? 0m : w.Min(); }
+    private decimal ChartMax() { var w = ChartWindow(); return w.Count == 0 ? 0m : w.Max(); }
+
+    private string ChartPoints()
+    {
+        List<decimal> w = ChartWindow();
+        if (w.Count < 2)
+        {
+            return string.Empty;
+        }
+
+        decimal min = w.Min();
+        decimal max = w.Max();
+        if (max == min)
+        {
+            min -= 0.01m;
+            max += 0.01m;
+        }
+
+        const double width = 240.0, height = 64.0, pad = 5.0;
+        var sb = new System.Text.StringBuilder();
+        for (int i = 0; i < w.Count; i++)
+        {
+            double x = pad + i * ((width - 2 * pad) / (w.Count - 1));
+            double y = pad + (1.0 - (double)((w[i] - min) / (max - min))) * (height - 2 * pad);
+            if (i > 0)
+            {
+                sb.Append(' ');
+            }
+
+            sb.Append(x.ToString("F1", Inv)).Append(',').Append(y.ToString("F1", Inv));
+        }
+
+        return sb.ToString();
+    }
+
+    // ------------------------------------------------------------------
+    // Small readers / formatters (mirroring the console's language)
+    // ------------------------------------------------------------------
+
+    private decimal Quote(Animal a) => _state!.Market.QuoteFor(a, MarketCfg, _state.Date.Season);
+
+    private decimal HerdValue()
+    {
+        decimal total = 0m;
+        foreach (Animal a in _state!.Herd)
+        {
+            total += Quote(a);
+        }
+
+        return total;
+    }
+
+    private double AverageWeight()
+    {
+        if (_state!.Herd.Count == 0)
+        {
+            return 0.0;
+        }
+
+        double sum = 0.0;
+        foreach (Animal a in _state.Herd)
+        {
+            sum += a.WeightKg;
+        }
+
+        return sum / _state.Herd.Count;
+    }
+
+    private double GrassFraction()
+    {
+        double biomass = 0.0, capacity = 0.0;
+        foreach (Paddock p in _state!.Paddocks)
+        {
+            biomass += p.GrassBiomass;
+            capacity += p.CarryingCapacity;
+        }
+
+        return capacity > 0 ? biomass / capacity : 0.0;
+    }
+
+    private double SoilHealth()
+    {
+        // Single-paddock Phase 1; average keeps it honest if more appear.
+        if (_state!.Paddocks.Count == 0)
+        {
+            return 0.0;
+        }
+
+        double sum = 0.0;
+        foreach (Paddock p in _state.Paddocks)
+        {
+            sum += p.SoilHealth;
+        }
+
+        return sum / _state.Paddocks.Count;
+    }
+
+    private int HeadsOnPasture()
+    {
+        int heads = 0;
+        foreach (Paddock p in _state!.Paddocks)
+        {
+            heads += p.OccupantIds.Count;
+        }
+
+        return heads;
+    }
+
+    private string RunwayLine()
+    {
+        decimal weeklyBurn = Economy.DailyBurn(_state!, MarketCfg) * DaysPerWeek;
+        if (weeklyBurn <= 0)
+        {
+            return "No burn. Suspiciously comfortable.";
+        }
+
+        int weeks = (int)(_state!.Cash / weeklyBurn);
+        string unit = weeks == 1 ? "week" : "weeks";
+        return $"At current burn ({Money(weeklyBurn)}/week), cash lasts ~{weeks} {unit} with no sales.";
+    }
+
+    private string MarketHint()
+    {
+        double shock = _state!.Market.ShockOffset;
+        if (shock < -0.05)
+        {
+            return "Market crashed — shock in effect.";
+        }
+
+        if (shock > 0.05)
+        {
+            return "Market spiking — shock in effect.";
+        }
+
+        string seasonal = _state.Date.Season switch
+        {
+            Season.Spring => "prices strong for spring",
+            Season.Summer => "steady summer market",
+            Season.Fall => "fall glut — the seasonal low",
+            _ => "modest winter premium",
+        };
+
+        double drift = _state.Market.DriftMultiplier;
+        if (drift > 1.04)
+        {
+            return Capitalize(seasonal + ", running hot.");
+        }
+
+        if (drift < 0.96)
+        {
+            return Capitalize(seasonal + ", running soft.");
+        }
+
+        return Capitalize(seasonal + ".");
+    }
+
+    private static string Capitalize(string s) =>
+        s.Length == 0 ? s : char.ToUpperInvariant(s[0]) + s.Substring(1);
+
+    private string WeatherLine()
+    {
+        WeatherState w = _state!.Weather;
+        if (w.Condition == WeatherCondition.Normal)
+        {
+            return "Fair — no complaints";
+        }
+
+        int dayOfSpell = w.TotalSpellDays - w.DaysRemaining + 1;
+        return $"{WeatherName(w.Condition)} — day {dayOfSpell} of ~{w.TotalSpellDays}";
+    }
+
+    private string WeatherEmoji() => _state!.Weather.Condition switch
+    {
+        WeatherCondition.Drought => "☀️",
+        WeatherCondition.HeatWave => "🥵",
+        WeatherCondition.Blizzard => "❄️",
+        WeatherCondition.WetSpring => "🌧️",
+        _ => "🌤️",
+    };
+
+    private static string WeatherName(WeatherCondition condition) => condition switch
+    {
+        WeatherCondition.Drought => "Drought",
+        WeatherCondition.HeatWave => "Heat wave",
+        WeatherCondition.Blizzard => "Blizzard",
+        WeatherCondition.WetSpring => "Wet spell",
+        _ => "Fair weather",
+    };
+
+    private static string SexIcon(Animal a) => a.Sex == Sex.Male ? "♂" : "♀";
+
+    private static string SexLabel(Animal a)
+    {
+        bool calf = a.AgeDays < 6 * GameDate.DaysPerSeason;
+        if (calf)
+        {
+            return a.Sex == Sex.Male ? "calf-m" : "calf-f";
+        }
+
+        return a.Sex == Sex.Male ? "bull" : "cow";
+    }
+
+    private static string DisplayName(Animal a) => string.IsNullOrEmpty(a.Name) ? a.Id : a.Name;
+
+    private static string Money(decimal amount)
+    {
+        string sign = amount < 0 ? "−" : string.Empty;
+        return sign + "$" + Math.Abs(amount).ToString("N2", Inv);
+    }
+
+    private static string Pct(double fraction)
+    {
+        if (double.IsNaN(fraction))
+        {
+            fraction = 0.0;
+        }
+
+        return (Math.Clamp(fraction, 0.0, 1.0) * 100.0).ToString("F0", Inv);
+    }
+
+    private static string Signed(double delta) =>
+        (delta >= 0 ? "+" : "−") + Math.Abs(delta).ToString("F1", Inv);
+
+    private static string Trend(double delta, double epsilon)
+    {
+        if (delta > epsilon) { return "▲"; }
+        if (delta < -epsilon) { return "▼"; }
+        return "→";
+    }
+}

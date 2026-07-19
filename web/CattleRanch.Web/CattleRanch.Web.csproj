@@ -2,6 +2,8 @@
 
   <PropertyGroup>
     <TargetFramework>net8.0</TargetFramework>
+    <!-- Run the dev server on any installed .NET >= 8 (the owner's Mac has 10). -->
+    <RollForward>LatestMajor</RollForward>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <!-- Deterministic, locale-independent formatting — matches the console

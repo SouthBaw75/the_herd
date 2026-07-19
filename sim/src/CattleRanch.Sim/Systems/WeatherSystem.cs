@@ -32,6 +32,12 @@ namespace CattleRanch.Sim.Systems
 
         /// <summary>Days left in the active spell, counting today; 0 when Normal.</summary>
         public int DaysRemaining { get; internal set; }
+
+        /// <summary>
+        /// Total length the active spell rolled at its start; 0 when Normal.
+        /// Lets presentation say "Drought, day 4 of 18" even from a loaded save.
+        /// </summary>
+        public int TotalSpellDays { get; internal set; }
     }
 
     /// <summary>
@@ -87,6 +93,7 @@ namespace CattleRanch.Sim.Systems
                 if (weather.DaysRemaining <= 0)
                 {
                     weather.DaysRemaining = 0;
+                    weather.TotalSpellDays = 0;
                     weather.Condition = WeatherCondition.Normal;
                 }
 
@@ -108,6 +115,7 @@ namespace CattleRanch.Sim.Systems
                     weather.Condition = kind;
                     weather.DaysRemaining = state.Rng.NextInt(
                         _config.SpellMinDays(kind), _config.SpellMaxDays(kind) + 1);
+                    weather.TotalSpellDays = weather.DaysRemaining;
                     return;
                 }
             }

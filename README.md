@@ -33,6 +33,19 @@ dotnet build      # compile the core + tests
 dotnet test       # run the deterministic sim test suite
 ```
 
+## Play the prototype (no Unity required)
+
+The Phase 1 fun-gate build (D9): an ugly, playable terminal game running on the
+real simulation. Weekly decisions — read the herd, the grass, and the market,
+then sell or hold and advance time.
+
+```bash
+dotnet run --project sim/src/CattleRanch.Play
+```
+
+Blank seed = the shared default (1701), so two people can compare identical
+runs. Saves go to `ranch-save.json` in the working directory.
+
 ## First-time clone
 
 ```bash

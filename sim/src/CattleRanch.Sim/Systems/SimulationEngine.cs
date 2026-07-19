@@ -9,6 +9,10 @@ namespace CattleRanch.Sim.Systems
     ///   <item>weather rolls (consumes RNG; multipliers for the day are fixed);</item>
     ///   <item>animals age and gain/lose weight reading the morning's grass
     ///         (before grazing depletes it) under weather stress;</item>
+    ///   <item>breeding: conception rolls, gestation, births (consumes RNG at
+    ///         this fixed point; after growth so ages are today's and newborns
+    ///         are not growth-updated on their birth day, before grazing so a
+    ///         calf joins its paddock before headcount-based intake);</item>
     ///   <item>each paddock's grass is grazed and regrows (list order), with the
     ///         weather multiplier on regrowth;</item>
     ///   <item>the market drifts/shocks (consumes RNG);</item>
@@ -23,6 +27,7 @@ namespace CattleRanch.Sim.Systems
         private readonly GrazingSystem _grazing;
         private readonly WeatherSystem _weather;
         private readonly AnimalGrowthSystem _growth;
+        private readonly BreedingSystem _breeding;
 
         public SimulationEngine(SimConfig? config = null)
         {
@@ -30,6 +35,7 @@ namespace CattleRanch.Sim.Systems
             _grazing = new GrazingSystem(_config.Grazing);
             _weather = new WeatherSystem(_config.Weather);
             _growth = new AnimalGrowthSystem(_config.Growth);
+            _breeding = new BreedingSystem(_config.Breeding);
         }
 
         /// <summary>
@@ -43,8 +49,12 @@ namespace CattleRanch.Sim.Systems
 
         public SimConfig Config => _config;
 
-        /// <summary>Advances the ranch exactly one day, in the fixed order above.</summary>
-        public void Step(RanchState state)
+        /// <summary>
+        /// Advances the ranch exactly one day, in the fixed order above.
+        /// Returns today's breeding report (conceptions/births) so callers can
+        /// announce them; callers that don't care simply ignore it.
+        /// </summary>
+        public BreedingReport Step(RanchState state)
         {
             // 1. Date.
             state.Date = state.Date.AddDays(1);
@@ -58,6 +68,10 @@ namespace CattleRanch.Sim.Systems
             // 3. Animals age/grow off the morning's grass (no RNG).
             _growth.DailyUpdate(state, stressMultiplier);
 
+            // 3½. Breeding: conceptions, gestation, births (RNG at this fixed
+            //     point — see order rationale in the class doc).
+            BreedingReport breedingReport = _breeding.DailyUpdate(state);
+
             // 4. Grass: graze + regrow per paddock, list order (no RNG).
             for (int i = 0; i < state.Paddocks.Count; i++)
             {
@@ -70,6 +84,8 @@ namespace CattleRanch.Sim.Systems
 
             // 6. Costs.
             Economy.DailyUpkeep(state, _config.Market);
+
+            return breedingReport;
         }
 
         /// <summary>Advances the ranch <paramref name="days"/> days.</summary>

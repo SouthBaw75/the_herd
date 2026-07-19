@@ -1,0 +1,18 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net8.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <RootNamespace>CattleRanch.Play</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- The prototype is presentation only: it reads/drives the sim through its
+         public API. Newtonsoft comes in transitively for the new-game cash
+         bootstrap (see NewGame.cs). -->
+    <ProjectReference Include="..\CattleRanch.Sim\CattleRanch.Sim.csproj" />
+  </ItemGroup>
+
+</Project>

@@ -174,7 +174,7 @@ namespace CattleRanch.Sim.Systems
         /// </summary>
         public static void DailyUpkeep(RanchState state, MarketConfig config)
         {
-            state.Cash -= state.Herd.Count * config.UpkeepPerHeadPerDay + config.OverheadPerDay;
+            state.Cash -= DailyBurn(state, config);
         }
 
         /// <summary>
@@ -184,5 +184,12 @@ namespace CattleRanch.Sim.Systems
         /// zero test with a credit-limit test.
         /// </summary>
         public static bool IsBroke(RanchState state) => state.Cash < 0m;
+
+        /// <summary>
+        /// Today's total running cost — the single source of the upkeep formula,
+        /// so presentation (cash-runway lines) never re-derives it.
+        /// </summary>
+        public static decimal DailyBurn(RanchState state, MarketConfig config) =>
+            state.Herd.Count * config.UpkeepPerHeadPerDay + config.OverheadPerDay;
     }
 }

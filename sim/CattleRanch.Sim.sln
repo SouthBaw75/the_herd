@@ -11,6 +11,8 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "tests", "tests", "{0A5A64D4
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CattleRanch.Sim.Tests", "tests\CattleRanch.Sim.Tests\CattleRanch.Sim.Tests.csproj", "{5F4D5D37-84D8-47BB-B697-339276F96A1D}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CattleRanch.Play", "src\CattleRanch.Play\CattleRanch.Play.csproj", "{C7E1206F-D289-4C57-9377-5434B15FA39F}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -28,9 +30,14 @@ Global
 		{5F4D5D37-84D8-47BB-B697-339276F96A1D}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{5F4D5D37-84D8-47BB-B697-339276F96A1D}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{5F4D5D37-84D8-47BB-B697-339276F96A1D}.Release|Any CPU.Build.0 = Release|Any CPU
+		{C7E1206F-D289-4C57-9377-5434B15FA39F}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{C7E1206F-D289-4C57-9377-5434B15FA39F}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{C7E1206F-D289-4C57-9377-5434B15FA39F}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{C7E1206F-D289-4C57-9377-5434B15FA39F}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(NestedProjects) = preSolution
 		{8F294827-E45B-46C9-B282-F0391D14FE65} = {6293BE59-6073-4B96-86FE-0F0BD3E8E3B3}
 		{5F4D5D37-84D8-47BB-B697-339276F96A1D} = {0A5A64D4-5A35-44AE-B63F-C80DD3E128EE}
+		{C7E1206F-D289-4C57-9377-5434B15FA39F} = {6293BE59-6073-4B96-86FE-0F0BD3E8E3B3}
 	EndGlobalSection
 EndGlobal

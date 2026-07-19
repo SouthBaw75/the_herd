@@ -22,11 +22,12 @@ namespace CattleRanch.Sim
             Market = new Systems.Market();
         }
 
-        public RanchState(long seed)
+        public RanchState(long seed, decimal startingCash = 0m)
             : this()
         {
             Seed = seed;
             Rng = new DeterministicRandom(seed);
+            Cash = startingCash;
         }
 
         /// <summary>Master seed; the initial value of <see cref="Rng"/>.</summary>

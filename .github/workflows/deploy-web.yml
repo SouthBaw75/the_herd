@@ -1,0 +1,57 @@
+# Builds the Blazor WASM prototype and publishes it to GitHub Pages.
+# The game URL is https://southbaw75.github.io/the_herd/
+name: Deploy web prototype
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [claude/cattle-ranch-orchestrator-k6i06w]
+    paths:
+      - "web/**"
+      - "sim/src/CattleRanch.Sim/**"
+      - ".github/workflows/deploy-web.yml"
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "8.0.x"
+
+      - name: Run sim tests (deploy gate)
+        run: dotnet test sim/CattleRanch.Sim.sln
+
+      - name: Publish web app
+        run: dotnet publish web/CattleRanch.Web/CattleRanch.Web.csproj -c Release -o pub
+
+      - name: Rebase for project-pages URL
+        run: sed -i 's|<base href="/" />|<base href="/the_herd/" />|' pub/wwwroot/index.html
+
+      - name: Configure Pages (auto-enable)
+        uses: actions/configure-pages@v5
+        with:
+          enablement: true
+
+      - name: Upload site
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: pub/wwwroot
+
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4

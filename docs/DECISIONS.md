@@ -22,6 +22,8 @@ Settled choices. Do not relitigate without a new entry that supersedes an old on
 
 | D12 | 2026-07-19 | The fun-gate prototype gets a **browser version: Blazor WebAssembly** (`web/`) compiling the unmodified `CattleRanch.Sim` to WASM. The terminal prototype stays; Unity remains the product target (paused at the owner's request, resumed later). NO parallel JS sim — the C# sim stays the single source of truth in every frontend. | Owner found both the terminal and the Unity editor unfriendly; a click-and-play web UI serves the fun gate better for this playtester. WASM feasibility verified in-container (template + runtime packs + static publish all work). |
 
+| D13 | 2026-07-19 | The web prototype gets a **graphical pasture scene** as its primary view (SVG, hand-drawn style): animated cattle sprites from the live RanchState, grass/season/weather visualization, click-to-select animals; the data table demoted to a secondary "ledger" view. Still presentation-only over the unmodified sim. | Owner playtest feedback: a data dashboard doesn't deliver the stewardship fantasy (pillars 1–2 are inherently visual — "the land is alive", "a favorite cow should be memorable"). Treated as legitimate fun-gate data, not scope creep; Unity remains the full-art target (Phase 3). |
+
 ## Open questions (raise before they block)
 - Cross-**runtime** determinism of `NextGaussian` (Box-Muller uses `Math.Log/Cos`;
   transcendentals are deterministic on a given runtime but not guaranteed

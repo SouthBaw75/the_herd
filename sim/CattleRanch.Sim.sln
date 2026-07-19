@@ -1,0 +1,36 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.0.31903.59
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "src", "src", "{6293BE59-6073-4B96-86FE-0F0BD3E8E3B3}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CattleRanch.Sim", "src\CattleRanch.Sim\CattleRanch.Sim.csproj", "{8F294827-E45B-46C9-B282-F0391D14FE65}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "tests", "tests", "{0A5A64D4-5A35-44AE-B63F-C80DD3E128EE}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CattleRanch.Sim.Tests", "tests\CattleRanch.Sim.Tests\CattleRanch.Sim.Tests.csproj", "{5F4D5D37-84D8-47BB-B697-339276F96A1D}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{8F294827-E45B-46C9-B282-F0391D14FE65}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{8F294827-E45B-46C9-B282-F0391D14FE65}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{8F294827-E45B-46C9-B282-F0391D14FE65}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{8F294827-E45B-46C9-B282-F0391D14FE65}.Release|Any CPU.Build.0 = Release|Any CPU
+		{5F4D5D37-84D8-47BB-B697-339276F96A1D}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{5F4D5D37-84D8-47BB-B697-339276F96A1D}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{5F4D5D37-84D8-47BB-B697-339276F96A1D}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{5F4D5D37-84D8-47BB-B697-339276F96A1D}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{8F294827-E45B-46C9-B282-F0391D14FE65} = {6293BE59-6073-4B96-86FE-0F0BD3E8E3B3}
+		{5F4D5D37-84D8-47BB-B697-339276F96A1D} = {0A5A64D4-5A35-44AE-B63F-C80DD3E128EE}
+	EndGlobalSection
+EndGlobal

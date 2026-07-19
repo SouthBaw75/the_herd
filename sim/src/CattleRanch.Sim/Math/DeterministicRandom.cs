@@ -18,25 +18,31 @@ namespace CattleRanch.Sim.Math
         // 2^53, the number of representable integers in a double's mantissa.
         private const double TwoPow53 = 9007199254740992.0;
 
-        private ulong _state;
-
-        // Box-Muller produces two independent normals per pair of uniforms.
-        // We cache the spare (in standard N(0,1) form) so no draws are wasted.
-        private bool _hasSpareGaussian;
-        private double _spareGaussian;
+        /// <summary>Parameterless constructor for serialization (Newtonsoft-friendly).</summary>
+        public DeterministicRandom()
+        {
+        }
 
         public DeterministicRandom(long seed)
         {
-            _state = unchecked((ulong)seed);
+            State = unchecked((ulong)seed);
         }
+
+        /// <summary>
+        /// The complete generator state (D10). Public-get / internal-set so it
+        /// serializes with <see cref="RanchState"/> and a loaded game continues
+        /// the exact stream a never-saved run would have produced. There is
+        /// deliberately no other hidden state (no Box-Muller spare cache).
+        /// </summary>
+        public ulong State { get; internal set; }
 
         /// <summary>Advances the state one step and returns the next raw 64-bit value.</summary>
         private ulong NextUInt64()
         {
             unchecked
             {
-                _state += GoldenGamma;
-                ulong z = _state;
+                State += GoldenGamma;
+                ulong z = State;
                 z = (z ^ (z >> 30)) * MixA;
                 z = (z ^ (z >> 27)) * MixB;
                 return z ^ (z >> 31);
@@ -66,25 +72,16 @@ namespace CattleRanch.Sim.Math
 
         public double NextGaussian(double mean, double stdDev)
         {
-            if (_hasSpareGaussian)
-            {
-                _hasSpareGaussian = false;
-                return mean + stdDev * _spareGaussian;
-            }
-
-            // Box-Muller transform. Draw u1 in (0, 1] so that Log is finite.
+            // Box-Muller transform, WITHOUT the usual spare-value cache: the
+            // generator's entire state must be the single State ulong so that
+            // save/load reproduces the exact stream (D10). One discarded normal
+            // per call is a negligible price. Draw u1 in (0, 1] so Log is finite.
             double u1 = 1.0 - NextDouble();
             double u2 = NextDouble();
             double magnitude = System.Math.Sqrt(-2.0 * System.Math.Log(u1));
             double angle = 2.0 * System.Math.PI * u2;
 
-            double z0 = magnitude * System.Math.Cos(angle);
-            double z1 = magnitude * System.Math.Sin(angle);
-
-            _spareGaussian = z1;
-            _hasSpareGaussian = true;
-
-            return mean + stdDev * z0;
+            return mean + stdDev * magnitude * System.Math.Cos(angle);
         }
     }
 }

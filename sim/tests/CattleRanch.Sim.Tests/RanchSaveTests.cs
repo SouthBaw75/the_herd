@@ -142,5 +142,33 @@ namespace CattleRanch.Sim.Tests
         {
             Assert.Throws<ArgumentNullException>(() => RanchSave.ToJson(null!));
         }
+
+        [Fact]
+        public void RoundTrip_RngStream_ContinuesIdentically()
+        {
+            // D10: a loaded save must continue the SAME random stream a
+            // never-saved run would have produced — including Gaussians, which
+            // is why DeterministicRandom carries no hidden spare-value cache.
+            var original = new RanchState(1234);
+            for (int i = 0; i < 57; i++) // consume an odd number of draws
+            {
+                original.Rng.NextDouble();
+                original.Rng.NextGaussian(0.0, 1.0);
+            }
+
+            var restored = RanchSave.FromJson(RanchSave.ToJson(original));
+            Assert.Equal(original.Rng.State, restored.Rng.State);
+
+            for (int i = 0; i < 100; i++)
+            {
+                Assert.Equal(original.Rng.NextDouble(), restored.Rng.NextDouble());
+                Assert.Equal(
+                    original.Rng.NextGaussian(5.0, 2.0),
+                    restored.Rng.NextGaussian(5.0, 2.0));
+                Assert.Equal(
+                    original.Rng.NextInt(0, 1000),
+                    restored.Rng.NextInt(0, 1000));
+            }
+        }
     }
 }

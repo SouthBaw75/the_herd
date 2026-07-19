@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using CattleRanch.Sim.Math;
 
 namespace CattleRanch.Sim
 {
@@ -15,16 +16,26 @@ namespace CattleRanch.Sim
             Date = GameDate.Start;
             Herd = new List<Animal>();
             Paddocks = new List<Paddock>();
+            Rng = new DeterministicRandom();
         }
 
         public RanchState(long seed)
             : this()
         {
             Seed = seed;
+            Rng = new DeterministicRandom(seed);
         }
 
-        /// <summary>Master seed; every stochastic system derives its RNG from this.</summary>
+        /// <summary>Master seed; the initial value of <see cref="Rng"/>.</summary>
         public long Seed { get; internal set; }
+
+        /// <summary>
+        /// THE randomness stream for the whole sim (D10). Systems draw from this
+        /// (never construct their own RNG), always in the engine's fixed update
+        /// order, so runs are reproducible and a loaded save continues the exact
+        /// stream. Serializes with the state because its full state is public.
+        /// </summary>
+        public DeterministicRandom Rng { get; internal set; }
 
         /// <summary>Current date. Advanced by the simulation engine.</summary>
         public GameDate Date { get; internal set; }

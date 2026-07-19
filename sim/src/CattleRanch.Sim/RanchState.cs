@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using CattleRanch.Sim.Math;
+using CattleRanch.Sim.Systems;
 
 namespace CattleRanch.Sim
 {
@@ -17,6 +18,8 @@ namespace CattleRanch.Sim
             Herd = new List<Animal>();
             Paddocks = new List<Paddock>();
             Rng = new DeterministicRandom();
+            Weather = new WeatherState();
+            Market = new Systems.Market();
         }
 
         public RanchState(long seed)
@@ -48,6 +51,12 @@ namespace CattleRanch.Sim
 
         /// <summary>The paddocks, iterated in list order for determinism.</summary>
         public List<Paddock> Paddocks { get; internal set; }
+
+        /// <summary>Current weather (Phase 1). Advanced daily by <see cref="WeatherSystem"/>.</summary>
+        public WeatherState Weather { get; internal set; }
+
+        /// <summary>Market price-model state (drift + shock). Serializes with the state.</summary>
+        public Systems.Market Market { get; internal set; }
 
         /// <summary>
         /// Deterministic entity-id counter. Ids come from here — never from

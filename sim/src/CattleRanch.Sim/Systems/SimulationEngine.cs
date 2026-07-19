@@ -1,34 +1,75 @@
 namespace CattleRanch.Sim.Systems
 {
     /// <summary>
-    /// Drives a <see cref="RanchState"/> forward one day at a time. Phase 0 wires
-    /// the clock to the grass heartbeat only (no market/weather/breeding). Each
-    /// day: advance the date, then update every paddock's grass/soil from the
-    /// head count grazing it. Deterministic — paddocks are iterated in list order.
+    /// Drives a <see cref="RanchState"/> forward one day at a time. The fixed
+    /// daily update order is load-bearing for determinism (D10: every RNG draw
+    /// happens in this order) — do not reorder without a decisions-log entry:
+    /// <list type="number">
+    ///   <item>date advances;</item>
+    ///   <item>weather rolls (consumes RNG; multipliers for the day are fixed);</item>
+    ///   <item>animals age and gain/lose weight reading the morning's grass
+    ///         (before grazing depletes it) under weather stress;</item>
+    ///   <item>each paddock's grass is grazed and regrows (list order), with the
+    ///         weather multiplier on regrowth;</item>
+    ///   <item>the market drifts/shocks (consumes RNG);</item>
+    ///   <item>daily upkeep is debited.</item>
+    /// </list>
+    /// Go-broke (<see cref="Economy.IsBroke"/>) is checked by the caller, not
+    /// the engine — game-over is a presentation decision.
     /// </summary>
     public sealed class SimulationEngine
     {
+        private readonly SimConfig _config;
         private readonly GrazingSystem _grazing;
+        private readonly WeatherSystem _weather;
+        private readonly AnimalGrowthSystem _growth;
 
-        public SimulationEngine(GrazingConfig? config = null)
+        public SimulationEngine(SimConfig? config = null)
         {
-            _grazing = new GrazingSystem(config ?? GrazingConfig.Default);
+            _config = config ?? SimConfig.Default;
+            _grazing = new GrazingSystem(_config.Grazing);
+            _weather = new WeatherSystem(_config.Weather);
+            _growth = new AnimalGrowthSystem(_config.Growth);
         }
 
-        public GrazingConfig Config => _grazing.Config;
+        /// <summary>
+        /// Convenience overload for grass-only scenarios/tests: everything else
+        /// takes defaults.
+        /// </summary>
+        public SimulationEngine(GrazingConfig? grazingConfig)
+            : this(new SimConfig { Grazing = grazingConfig ?? GrazingConfig.Default })
+        {
+        }
 
-        /// <summary>Advances the ranch exactly one day.</summary>
+        public SimConfig Config => _config;
+
+        /// <summary>Advances the ranch exactly one day, in the fixed order above.</summary>
         public void Step(RanchState state)
         {
+            // 1. Date.
             state.Date = state.Date.AddDays(1);
             Season season = state.Date.Season;
 
-            // Deterministic iteration: list order.
+            // 2. Weather (RNG). Multipliers are fixed for the rest of the day.
+            _weather.DailyUpdate(state);
+            double grassMultiplier = _weather.GrassGrowthMultiplier(state);
+            double stressMultiplier = _weather.AnimalStressMultiplier(state);
+
+            // 3. Animals age/grow off the morning's grass (no RNG).
+            _growth.DailyUpdate(state, stressMultiplier);
+
+            // 4. Grass: graze + regrow per paddock, list order (no RNG).
             for (int i = 0; i < state.Paddocks.Count; i++)
             {
                 Paddock paddock = state.Paddocks[i];
-                _grazing.UpdateDaily(paddock, paddock.OccupantIds.Count, season);
+                _grazing.UpdateDaily(paddock, paddock.OccupantIds.Count, season, grassMultiplier);
             }
+
+            // 5. Market (RNG).
+            state.Market.DailyUpdate(state, _config.Market);
+
+            // 6. Costs.
+            Economy.DailyUpkeep(state, _config.Market);
         }
 
         /// <summary>Advances the ranch <paramref name="days"/> days.</summary>

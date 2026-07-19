@@ -26,9 +26,12 @@ namespace CattleRanch.Sim.Systems
         public GrazingConfig Config => _config;
 
         /// <summary>
-        /// Advances one paddock by a single day given the number of head grazing it.
+        /// Advances one paddock by a single day given the number of head grazing
+        /// it. <paramref name="weatherGrowthMultiplier"/> is today's
+        /// <see cref="WeatherSystem.GrassGrowthMultiplier"/> (1.0 when running
+        /// without weather) — it scales regrowth only, never intake.
         /// </summary>
-        public void UpdateDaily(Paddock paddock, int headCount, Season season)
+        public void UpdateDaily(Paddock paddock, int headCount, Season season, double weatherGrowthMultiplier = 1.0)
         {
             // 1. Carrying capacity is a function of soil health and area.
             double capacity = _config.MaxCapacityPerHa * paddock.AreaHectares * paddock.SoilHealth;
@@ -44,6 +47,7 @@ namespace CattleRanch.Sim.Systems
                 double growth = _config.RegrowthRate
                                 * paddock.SoilHealth
                                 * seasonal
+                                * weatherGrowthMultiplier
                                 * biomass
                                 * (1.0 - biomass / capacity);
                 biomass += growth;

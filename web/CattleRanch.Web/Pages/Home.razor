@@ -11,6 +11,11 @@
 {
     <div class="start-wrap">
         <div class="start-card">
+            <svg class="vignette" viewBox="0 0 480 200" role="img" aria-label="A small ranch at dusk">
+                @((MarkupString)SceneArt.Vignette())
+                <g transform="translate(295 158)">@((MarkupString)CowArt.Svg(VignetteCowA, 0.78, false, true, false, false))</g>
+                <g transform="translate(408 172)">@((MarkupString)CowArt.Svg(VignetteCowB, 0.5, true, false, false, false))</g>
+            </svg>
             <h1 class="start-title">CATTLE RANCH <span class="proto-tag">(prototype)</span></h1>
             <p class="premise">You inherit a run-down ranch: one paddock, ten head, and $15,000 in the bank. One recurring question — should you sell now?</p>
             <label class="seed-label" for="seed-input">World seed</label>
@@ -31,159 +36,238 @@
 else if (_state != null)
 {
     <div class="game @(_screen == Screen.GameOver ? "blurred" : "")">
-        <header class="topbar">
-            <div class="stat date-stat">
-                <span class="stat-label">Week @WeekNumber</span>
-                <span id="date-value" class="stat-value">Year @_state.Date.Year · @_state.Date.Season · Day @_state.Date.DayOfSeason/@GameDate.DaysPerSeason</span>
-                <div class="minibar" title="Season progress">
-                    <div class="minibar-fill" style="width: @Pct((double)_state.Date.DayOfSeason / GameDate.DaysPerSeason)%"></div>
+        <div class="scene-panel">
+            <div class="scene-frame">
+                <svg id="pasture-scene" class="scene" viewBox="0 0 900 620" preserveAspectRatio="xMidYMid meet">
+                    @((MarkupString)SceneArt.Sky(_state.Date.Season, _state.Weather.Condition))
+                    @((MarkupString)SceneArt.Field(GrassFraction(), SoilHealth(), _state.Date.Season, _state.Weather.Condition))
+                    @foreach (var p in PlaceHerd())
+                    {
+                        var pl = p;
+                        <g class="cow-sprite @(pl.A.Id == _selectedId ? "selected" : "") @(_newborns.Contains(pl.A.Id) ? "newborn" : "")"
+                           data-id="@pl.A.Id" @key="pl.A.Id"
+                           transform="translate(@N(pl.X) @N(pl.Y))"
+                           @onclick="() => SelectCow(pl.A)">
+                            <g class="cow-amble" style="animation-duration:@N(pl.AmbleSec)s;animation-delay:-@N(pl.AmbleDelay)s">
+                                @if (pl.A.Id == _selectedId)
+                                {
+                                    <ellipse class="select-ring" cx="@N(2 * pl.Scale)" cy="@N(38 * pl.Scale)" rx="@N(52 * pl.Scale)" ry="@N(10 * pl.Scale)" />
+                                }
+                                @((MarkupString)CowArt.Svg(pl.A, pl.Scale, pl.Flip, pl.Grazing, showName: true, newborn: _newborns.Contains(pl.A.Id)))
+                            </g>
+                        </g>
+                    }
+                    @if (_state.Herd.Count == 0)
+                    {
+                        @((MarkupString)"<text class=\"empty-field-note\" x=\"450\" y=\"420\">The paddock is very quiet.</text>")
+                    }
+                    @((MarkupString)SceneArt.WeatherOverlay(_state.Weather.Condition))
+                </svg>
+
+                <div class="hud hud-tl">
+                    <div class="hud-chip">
+                        <span class="hud-label">Week @WeekNumber</span>
+                        <span id="date-value" class="hud-value">Year @_state.Date.Year · @_state.Date.Season · Day @_state.Date.DayOfSeason/@GameDate.DaysPerSeason</span>
+                    </div>
+                    <div class="hud-chip">
+                        <span class="hud-label">Weather</span>
+                        <span id="weather-value" class="hud-value">@WeatherEmoji() @WeatherLine()</span>
+                    </div>
+                    @if (_state.Date.Season == Season.Winter)
+                    {
+                        <div id="winter-banner" class="hud-chip winter-chip">❄️ Winter — grass sleeps till spring; upkeep doesn't.</div>
+                    }
+                </div>
+
+                <div class="hud hud-tr">
+                    <div class="hud-chip">
+                        <span class="hud-label">Cash</span>
+                        <span id="cash-value" class="hud-value cash">@Money(_state.Cash)</span>
+                    </div>
+                    <div class="hud-chip">
+                        <span class="hud-label">Herd</span>
+                        <span id="herd-count" class="hud-value">🐄 @_state.Herd.Count head</span>
+                    </div>
+                    <div class="hud-chip hud-actions">
+                        <button id="save-btn" class="btn tiny" @onclick="SaveClicked">Save</button>
+                        <button id="load-btn" class="btn tiny" @onclick="LoadClicked" disabled="@(!_hasSave)">Load</button>
+                        @if (_saveNote != null)
+                        {
+                            <span class="save-note">@_saveNote</span>
+                        }
+                    </div>
+                </div>
+
+                <div class="hud hud-bl">
+                    <span id="runway-line" class="hud-runway">@RunwayLine()</span>
                 </div>
             </div>
-            <div class="stat weather-stat">
-                <span class="stat-label">Weather</span>
-                <span id="weather-value" class="stat-value">@WeatherEmoji() @WeatherLine()</span>
-            </div>
-            <div class="stat cash-stat">
-                <span class="stat-label">Cash</span>
-                <span id="cash-value" class="stat-value">@Money(_state.Cash)</span>
-            </div>
-            <div class="stat herd-stat">
-                <span class="stat-label">Herd</span>
-                <span id="herd-count" class="stat-value">🐄 @_state.Herd.Count head</span>
-            </div>
-            <div class="topbar-actions">
-                <button id="save-btn" class="btn small" @onclick="SaveClicked">Save</button>
-                <button id="load-btn" class="btn small" @onclick="LoadClicked" disabled="@(!_hasSave)">Load</button>
-                @if (_saveNote != null)
-                {
-                    <span class="save-note">@_saveNote</span>
-                }
-            </div>
-        </header>
-
-        @if (_state.Date.Season == Season.Winter)
-        {
-            <div id="winter-banner" class="winter-banner">
-                ❄️ <strong>WINTER:</strong> grass stops growing until spring; upkeep does not. What's standing in the paddock is the feed you've got.
-            </div>
-        }
-
-        <div class="main-grid">
-            <div class="col left-col">
-                <section class="card pasture-card">
-                    <h2>Pasture <span class="card-sub">P-0 · 12 ha</span></h2>
-                    <div class="bar-row">
-                        <span class="bar-label">Grass</span>
-                        <div class="bar"><div class="bar-fill grass" style="width: @Pct(GrassFraction())%"></div></div>
-                        <span id="grass-pct" class="bar-value">@Pct(GrassFraction())% of capacity</span>
-                    </div>
-                    <div class="bar-row">
-                        <span class="bar-label">Soil</span>
-                        <div class="bar"><div class="bar-fill soil" style="width: @Pct(SoilHealth())%"></div></div>
-                        <span class="bar-value">@Pct(SoilHealth())%</span>
-                    </div>
-                    <p class="pasture-heads">@HeadsOnPasture() head on pasture</p>
-                </section>
-
-                <section class="card market-card">
-                    <h2>Market</h2>
-                    <div class="price-big" id="price-value">@Money(PricePerKg)<span class="per-kg">/kg</span></div>
-                    @{ var pts = ChartPoints(); }
-                    @if (pts.Length > 0)
-                    {
-                        <svg class="price-chart" viewBox="0 0 240 64" preserveAspectRatio="none" role="img" aria-label="Recent weekly prices">
-                            <polyline points="@pts" fill="none" stroke="#6a994e" stroke-width="2" />
-                        </svg>
-                    }
-                    else
-                    {
-                        <div class="price-chart chart-empty">building price history…</div>
-                    }
-                    <div class="chart-caption">last @ChartWindow().Count wk · low @Money(ChartMin()) — high @Money(ChartMax())</div>
-                    <p class="market-hint">@MarketHint()</p>
-                    <p id="runway-line" class="runway">@RunwayLine()</p>
-                </section>
-            </div>
-
-            <section class="card herd-card">
-                <h2>Herd <span class="card-sub">click a name to rename · worth @Money(HerdValue()) at today's prices</span></h2>
-                <div class="herd-scroll">
-                    <table class="herd-table">
-                        <thead>
-                            <tr><th>Name / ID</th><th>Sex</th><th>Age</th><th>Weight</th><th></th><th class="num">Quote</th><th></th></tr>
-                        </thead>
-                        <tbody>
-                            @foreach (var animal in _state.Herd)
-                            {
-                                var a = animal;
-                                <tr>
-                                    <td class="name-cell">
-                                        @if (_renamingId == a.Id)
-                                        {
-                                            <input @ref="_renameInput" class="rename-input" @bind="_renameText" @bind:event="oninput"
-                                                   @onkeydown="e => RenameKey(e, a)" @onblur="() => CommitRename(a)" />
-                                        }
-                                        else
-                                        {
-                                            <button class="name-btn" title="Rename" @onclick="() => BeginRename(a)">@DisplayName(a)</button>
-                                        }
-                                    </td>
-                                    <td>@SexIcon(a) @SexLabel(a)</td>
-                                    <td>@(a.AgeDays / GameDate.DaysPerSeason) sns</td>
-                                    <td>@a.WeightKg.ToString("F0", Inv) kg</td>
-                                    <td class="preg-cell">@(a.Pregnancy.IsPregnant ? "🤰" : "")</td>
-                                    <td class="num">@Money(Quote(a))</td>
-                                    <td><button class="btn sell-btn" @onclick="() => AskSell(a)">Sell</button></td>
-                                </tr>
-                            }
-                            @if (_state.Herd.Count == 0)
-                            {
-                                <tr><td colspan="7" class="empty-herd">The herd is empty. The paddock is very quiet.</td></tr>
-                            }
-                        </tbody>
-                    </table>
-                </div>
-                <button id="advance-btn" class="btn primary advance-btn" @onclick="AdvanceWeek">Advance 1 Week ▶</button>
-            </section>
-
-            <section class="col reports-col">
-                <h2 class="reports-title">Week reports</h2>
-                @if (_reports.Count == 0)
-                {
-                    <div class="card report dim"><p class="report-line">No weeks on the books yet. Hit <em>Advance 1 Week</em>.</p></div>
-                }
-                @for (int i = 0; i < _reports.Count; i++)
-                {
-                    var r = _reports[i];
-                    <div class="card report @(i == 0 ? "latest" : "dim")">
-                        <h3>Week @r.Week@(r.DaysRun < 7 ? $" ({r.DaysRun} days)" : "")</h3>
-                        @if (r.Events.Count == 0 && r.Births.Count == 0)
-                        {
-                            <p class="report-line">• Quiet week. The weather held.</p>
-                        }
-                        @foreach (var e in r.Events)
-                        {
-                            <p class="report-line">• @e</p>
-                        }
-                        @foreach (var b in r.Births)
-                        {
-                            <p class="report-line birth">• 🐄 A calf was born! @b joins the herd.</p>
-                        }
-                        @if (r.HerdEmpty)
-                        {
-                            <p class="report-line">• Herd: empty. The overhead bills arrive anyway.</p>
-                        }
-                        else
-                        {
-                            <p class="report-line">• Herd: avg @r.AvgWeight.ToString("F0", Inv) kg (@Signed(r.AvgDelta) kg this week) @Trend(r.AvgDelta, 0.05)</p>
-                        }
-                        <p class="report-line">• Grass: @Pct(r.GrassFrac)% of capacity @Trend(r.GrassFrac - r.PreGrassFrac, 0.001) (was @Pct(r.PreGrassFrac)%)</p>
-                        <p class="report-line">• Price: @Money(r.PrePrice)/kg → @Money(r.Price)/kg @Trend((double)(r.Price - r.PrePrice), 0.001)</p>
-                        <p class="report-line">• Cash: @Money(r.PreCash) → @Money(r.Cash) (@Money(r.Cash - r.PreCash))</p>
-                    </div>
-                }
-            </section>
+            <button id="advance-btn" class="btn primary advance-btn" @onclick="AdvanceWeek">Advance 1 Week ▶</button>
         </div>
+
+        <aside class="side">
+            @{ var sel = SelectedAnimal; }
+            @if (sel != null)
+            {
+                <section id="animal-card" class="card animal-card">
+                    <div class="animal-card-top">
+                        <svg class="portrait" viewBox="-74 -66 148 118" role="img" aria-label="Portrait of @DisplayName(sel)">
+                            @((MarkupString)CowArt.Svg(sel, 1.0, false, false, false, false))
+                        </svg>
+                        <div class="animal-id-block">
+                            <input id="card-name" class="card-name" value="@sel.Name" placeholder="unnamed — type a name"
+                                   @onchange="e => SetName(sel, e.Value?.ToString())" />
+                            <span id="card-id" class="card-id">@sel.Id · @sel.Breed</span>
+                            <span class="card-vitals">@SexIcon(sel) @SexLabel(sel) · @(sel.AgeDays / GameDate.DaysPerSeason) seasons · @sel.WeightKg.ToString("F0", Inv) kg</span>
+                            @if (sel.Pregnancy.IsPregnant)
+                            {
+                                <span class="card-preg">🤰 In calf — day @sel.Pregnancy.DaysPregnant of @_engine.Config.Breeding.GestationDays</span>
+                            }
+                        </div>
+                    </div>
+                    <div class="traits">
+                        @foreach (var t in Traits(sel))
+                        {
+                            <div class="trait-row">
+                                <span class="trait-label">@t.Label</span>
+                                <div class="trait-bar"><div class="trait-fill" style="width:@(((int)t.Value))%"></div></div>
+                                <span class="trait-num">@((int)t.Value)</span>
+                            </div>
+                        }
+                    </div>
+                    <div class="animal-card-actions">
+                        <span class="card-quote">Today's quote <strong id="card-quote">@Money(Quote(sel))</strong></span>
+                        <button id="card-sell-btn" class="btn sell-btn" @onclick="() => AskSell(sel)">Sell @DisplayName(sel)</button>
+                    </div>
+                </section>
+            }
+            else
+            {
+                <section class="card pick-hint">
+                    <span class="pick-hint-cow">🐄</span> Click a cow out in the pasture to look her over — rename her, check her lines, get a quote.
+                </section>
+            }
+
+            <section class="card market-card">
+                <div class="market-top">
+                    <div class="market-price-block">
+                        <h2>Market</h2>
+                        <div class="price-big" id="price-value">@Money(PricePerKg)<span class="per-kg">/kg</span></div>
+                    </div>
+                    <div class="land-mini">
+                        <div class="bar-row">
+                            <span class="bar-label">Grass</span>
+                            <div class="bar"><div class="bar-fill grass" style="width: @Pct(GrassFraction())%"></div></div>
+                            <span id="grass-pct" class="bar-value">@Pct(GrassFraction())%</span>
+                        </div>
+                        <div class="bar-row">
+                            <span class="bar-label">Soil</span>
+                            <div class="bar"><div class="bar-fill soil" style="width: @Pct(SoilHealth())%"></div></div>
+                            <span class="bar-value">@Pct(SoilHealth())%</span>
+                        </div>
+                    </div>
+                </div>
+                @{ var pts = ChartPoints(); }
+                @if (pts.Length > 0)
+                {
+                    <svg class="price-chart" viewBox="0 0 240 48" preserveAspectRatio="none" role="img" aria-label="Recent weekly prices">
+                        <polyline points="@pts" fill="none" stroke="#6a994e" stroke-width="2" />
+                    </svg>
+                }
+                else
+                {
+                    <div class="price-chart chart-empty">building price history…</div>
+                }
+                <p class="market-hint">@MarketHint() Herd worth @Money(HerdValue()) at the gate.</p>
+            </section>
+
+            <section class="card feed-card">
+                <div class="feed-head">
+                    <h2>@(_ledgerOpen ? "Ledger" : "Week reports")</h2>
+                    <button id="ledger-toggle" class="btn tiny" @onclick="() => _ledgerOpen = !_ledgerOpen">
+                        @(_ledgerOpen ? "◂ Reports" : "Ledger ▸")
+                    </button>
+                </div>
+                @if (_ledgerOpen)
+                {
+                    <div id="ledger" class="herd-scroll">
+                        <table class="herd-table">
+                            <thead>
+                                <tr><th>Name / ID</th><th>Sex</th><th>Age</th><th>Weight</th><th></th><th class="num">Quote</th><th></th></tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var animal in _state.Herd)
+                                {
+                                    var a = animal;
+                                    <tr class="@(a.Id == _selectedId ? "row-selected" : "")">
+                                        <td class="name-cell">
+                                            @if (_renamingId == a.Id)
+                                            {
+                                                <input @ref="_renameInput" class="rename-input" @bind="_renameText" @bind:event="oninput"
+                                                       @onkeydown="e => RenameKey(e, a)" @onblur="() => CommitRename(a)" />
+                                            }
+                                            else
+                                            {
+                                                <button class="name-btn" title="Rename" @onclick="() => BeginRename(a)">@DisplayName(a)</button>
+                                            }
+                                        </td>
+                                        <td>@SexIcon(a) @SexLabel(a)</td>
+                                        <td>@(a.AgeDays / GameDate.DaysPerSeason) sns</td>
+                                        <td>@a.WeightKg.ToString("F0", Inv) kg</td>
+                                        <td class="preg-cell">@(a.Pregnancy.IsPregnant ? "🤰" : "")</td>
+                                        <td class="num">@Money(Quote(a))</td>
+                                        <td><button class="btn sell-btn" @onclick="() => AskSell(a)">Sell</button></td>
+                                    </tr>
+                                }
+                                @if (_state.Herd.Count == 0)
+                                {
+                                    <tr><td colspan="7" class="empty-herd">The herd is empty. The paddock is very quiet.</td></tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                }
+                else
+                {
+                    <div class="reports-scroll">
+                        @if (_reports.Count == 0)
+                        {
+                            <div class="report dim"><p class="report-line">No weeks on the books yet. Hit <em>Advance 1 Week</em>.</p></div>
+                        }
+                        @for (int i = 0; i < _reports.Count; i++)
+                        {
+                            var r = _reports[i];
+                            <div class="report @(i == 0 ? "latest" : "dim")">
+                                <h3>Week @r.Week@(r.DaysRun < 7 ? $" ({r.DaysRun} days)" : "")</h3>
+                                @if (r.Events.Count == 0 && r.Births.Count == 0)
+                                {
+                                    <p class="report-line">• Quiet week. The weather held.</p>
+                                }
+                                @foreach (var e in r.Events)
+                                {
+                                    <p class="report-line">• @e</p>
+                                }
+                                @foreach (var b in r.Births)
+                                {
+                                    <p class="report-line birth">• 🐄 A calf was born! @b joins the herd.</p>
+                                }
+                                @if (r.HerdEmpty)
+                                {
+                                    <p class="report-line">• Herd: empty. The overhead bills arrive anyway.</p>
+                                }
+                                else
+                                {
+                                    <p class="report-line">• Herd: avg @r.AvgWeight.ToString("F0", Inv) kg (@Signed(r.AvgDelta) kg this week) @Trend(r.AvgDelta, 0.05)</p>
+                                }
+                                <p class="report-line">• Grass: @Pct(r.GrassFrac)% of capacity @Trend(r.GrassFrac - r.PreGrassFrac, 0.001) (was @Pct(r.PreGrassFrac)%)</p>
+                                <p class="report-line">• Price: @Money(r.PrePrice)/kg → @Money(r.Price)/kg @Trend((double)(r.Price - r.PrePrice), 0.001)</p>
+                                <p class="report-line">• Cash: @Money(r.PreCash) → @Money(r.Cash) (@Money(r.Cash - r.PreCash))</p>
+                            </div>
+                        }
+                    </div>
+                }
+            </section>
+        </aside>
     </div>
 
     @if (_pendingSale != null)
@@ -248,11 +332,45 @@ else if (_state != null)
     private bool _focusRename;
     private ElementReference _renameInput;
 
+    // Scene state (presentation only): selection, ledger toggle, and the ids
+    // of calves born on the most recent advance (they get a sparkle).
+    private string? _selectedId;
+    private bool _ledgerOpen;
+    private readonly HashSet<string> _newborns = new();
+
+    // Purely decorative animals for the start-screen vignette — never added to
+    // any sim state, never ticked. Presentation props, like a painted sign.
+    private static readonly Animal VignetteCowA =
+        new("V-1", "", Sex.Female, "Hereford", 10 * GameDate.DaysPerSeason, 480, default);
+    private static readonly Animal VignetteCowB =
+        new("V-2", "", Sex.Female, "Angus", 10 * GameDate.DaysPerSeason, 470, default);
+
     private MarketConfig MarketCfg => _engine.Config.Market;
     private decimal PricePerKg => _state!.Market.PricePerKg(MarketCfg, _state.Date.Season);
     private int WeekNumber => _state!.Date.TotalDays / DaysPerWeek + 1;
     private int YearsSurvived => _state!.Date.TotalDays / GameDate.DaysPerYear;
     private int WeeksIntoYear => _state!.Date.TotalDays % GameDate.DaysPerYear / DaysPerWeek;
+
+    private Animal? SelectedAnimal
+    {
+        get
+        {
+            if (_selectedId == null || _state == null)
+            {
+                return null;
+            }
+
+            foreach (Animal a in _state.Herd)
+            {
+                if (a.Id == _selectedId)
+                {
+                    return a;
+                }
+            }
+
+            return null;
+        }
+    }
 
     private sealed record WeekReport(
         int Week, int DaysRun, List<string> Events, List<string> Births,
@@ -273,6 +391,145 @@ else if (_state != null)
             _focusRename = false;
             await _renameInput.FocusAsync();
         }
+    }
+
+    // ------------------------------------------------------------------
+    // The pasture scene: stable per-animal placement + pose.
+    // Cosmetic only — hash of the animal id, never state.Rng (D10).
+    // ------------------------------------------------------------------
+
+    private readonly record struct Placement(
+        Animal A, double X, double Y, double Scale, bool Flip, bool Grazing,
+        double AmbleSec, double AmbleDelay);
+
+    private List<Placement> PlaceHerd()
+    {
+        int n = _state!.Herd.Count;
+        int day = _state.Date.TotalDays;
+
+        // Anchor positions from independent per-id hashes (decorrelated axes).
+        var ids = new List<Animal>(_state.Herd);
+        ids.Sort((a, b) => string.CompareOrdinal(a.Id, b.Id));
+        var xs = new double[n];
+        var ys = new double[n];
+        for (int i = 0; i < n; i++)
+        {
+            uint hx = Hash(ids[i].Id + "#x");
+            uint hy = Hash(ids[i].Id + "#y");
+            xs[i] = 70 + (hx % 997u) / 996.0 * 760.0;           // 70..830
+            ys[i] = 296 + (hy % 991u) / 990.0 * 258.0;          // 296..554
+            KeepClearOfProps(ref xs[i], ref ys[i]);
+        }
+
+        // A few deterministic relaxation passes so cows don't stack: iterate
+        // pairs in sorted-id order and nudge apart. Same herd => same result
+        // every render; only cosmetic, no RNG involved.
+        for (int pass = 0; pass < 3; pass++)
+        {
+            for (int i = 0; i < n; i++)
+            {
+                for (int j = i + 1; j < n; j++)
+                {
+                    double ddx = xs[j] - xs[i];
+                    double ddy = (ys[j] - ys[i]) * 2.2;         // y separation is worth more
+                    double dist = Math.Sqrt(ddx * ddx + ddy * ddy);
+                    const double minDist = 96.0;
+                    if (dist >= minDist || dist < 0.001)
+                    {
+                        continue;
+                    }
+
+                    double push = (minDist - dist) / 2.0;
+                    double ux = ddx / dist, uy = ddy / dist / 2.2;
+                    xs[i] = Math.Clamp(xs[i] - ux * push, 60, 840);
+                    xs[j] = Math.Clamp(xs[j] + ux * push, 60, 840);
+                    ys[i] = Math.Clamp(ys[i] - uy * push, 296, 554);
+                    ys[j] = Math.Clamp(ys[j] + uy * push, 296, 554);
+                    KeepClearOfProps(ref xs[i], ref ys[i]);
+                    KeepClearOfProps(ref xs[j], ref ys[j]);
+                }
+            }
+        }
+
+        var list = new List<Placement>(n);
+        for (int i = 0; i < n; i++)
+        {
+            Animal a = ids[i];
+            uint h = Hash(a.Id);
+            double x = xs[i], y = ys[i];
+            bool calf = a.AgeDays < 6 * GameDate.DaysPerSeason;
+            double depth = (y - 296) / 258.0;
+            double scale = 0.60 + 0.34 * depth;
+            if (calf)
+            {
+                scale *= 0.62;
+            }
+
+            bool flip = ((h >> 20) & 1u) == 1u;
+            // Pose drifts with the calendar so the herd re-poses as weeks pass,
+            // but is identical across re-renders of the same day.
+            bool grazing = ((h >> 21) + (uint)(day / 2)) % 4u != 0u;
+            double ambleSec = 14 + (h >> 22) % 9u;
+            double ambleDelay = (h >> 13) % 17u;
+            list.Add(new Placement(a, x, y, scale, flip, grazing, ambleSec, ambleDelay));
+        }
+
+        // Painter's order: farther (higher) cows first so near ones overlap.
+        list.Sort((p, q) => p.Y.CompareTo(q.Y));
+        return list;
+    }
+
+    /// <summary>Keep a cow out of the pond and off the barn footprint.</summary>
+    private static void KeepClearOfProps(ref double x, ref double y)
+    {
+        double dx = (x - 745) / 155.0, dy = (y - 498) / 78.0;
+        if (dx * dx + dy * dy < 1.0)
+        {
+            x -= 300;
+        }
+
+        if (x < 250 && y < 330)
+        {
+            y += 72;
+        }
+    }
+
+    /// <summary>FNV-1a — a stable cosmetic hash of the animal id.</summary>
+    private static uint Hash(string s)
+    {
+        unchecked
+        {
+            uint h = 2166136261;
+            foreach (char c in s)
+            {
+                h = (h ^ c) * 16777619;
+            }
+
+            return h;
+        }
+    }
+
+    private static string N(double v) => v.ToString("F1", Inv);
+
+    private void SelectCow(Animal a) => _selectedId = _selectedId == a.Id ? null : a.Id;
+
+    private async Task SetName(Animal a, string? value)
+    {
+        a.Name = (value ?? string.Empty).Trim();
+        await SaveToStorage();
+    }
+
+    private readonly record struct TraitBar(string Label, float Value);
+
+    private static IEnumerable<TraitBar> Traits(Animal a)
+    {
+        yield return new TraitBar("Growth", a.Genome.GrowthRate);
+        yield return new TraitBar("Calving", a.Genome.CalvingEase);
+        yield return new TraitBar("Marbling", a.Genome.Marbling);
+        yield return new TraitBar("Mothering", a.Genome.Mothering);
+        yield return new TraitBar("Heat tol.", a.Genome.HeatTolerance);
+        yield return new TraitBar("Disease res.", a.Genome.DiseaseResistance);
+        yield return new TraitBar("Fertility", a.Genome.Fertility);
     }
 
     // ------------------------------------------------------------------
@@ -358,6 +615,9 @@ else if (_state != null)
         _pendingSale = null;
         _renamingId = null;
         _saveNote = null;
+        _selectedId = null;
+        _ledgerOpen = false;
+        _newborns.Clear();
     }
 
     // ------------------------------------------------------------------
@@ -374,6 +634,7 @@ else if (_state != null)
         _pendingSale = null;
         _renamingId = null;
         _saveNote = null;
+        _newborns.Clear();
 
         int week = WeekNumber;
         double preAvgWeight = AverageWeight();
@@ -396,6 +657,7 @@ else if (_state != null)
             foreach (Animal calf in report.BornToday)
             {
                 births.Add(calf.Id);
+                _newborns.Add(calf.Id);
             }
 
             WeatherCondition cond = _state.Weather.Condition;
@@ -462,6 +724,11 @@ else if (_state != null)
             return;
         }
 
+        if (_pendingSale.Id == _selectedId)
+        {
+            _selectedId = null;
+        }
+
         Economy.SellAnimal(_state, MarketCfg, _pendingSale.Id);
         _pendingSale = null;
         await SaveToStorage();
@@ -524,9 +791,6 @@ else if (_state != null)
         return _priceHistory.GetRange(_priceHistory.Count - count, count);
     }
 
-    private decimal ChartMin() { var w = ChartWindow(); return w.Count == 0 ? 0m : w.Min(); }
-    private decimal ChartMax() { var w = ChartWindow(); return w.Count == 0 ? 0m : w.Max(); }
-
     private string ChartPoints()
     {
         List<decimal> w = ChartWindow();
@@ -543,7 +807,7 @@ else if (_state != null)
             max += 0.01m;
         }
 
-        const double width = 240.0, height = 64.0, pad = 5.0;
+        const double width = 240.0, height = 48.0, pad = 4.0;
         var sb = new System.Text.StringBuilder();
         for (int i = 0; i < w.Count; i++)
         {
@@ -620,17 +884,6 @@ else if (_state != null)
         }
 
         return sum / _state.Paddocks.Count;
-    }
-
-    private int HeadsOnPasture()
-    {
-        int heads = 0;
-        foreach (Paddock p in _state!.Paddocks)
-        {
-            heads += p.OccupantIds.Count;
-        }
-
-        return heads;
     }
 
     private string RunwayLine()

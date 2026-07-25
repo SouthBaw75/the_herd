@@ -117,24 +117,27 @@ internal static class CowArt
 
         sb.Append("</g>"); // flip
         sb.Append("</g>"); // pop
+        sb.Append("</g>"); // scale
 
-        // Badges + name float above, never mirrored
+        // Badges + name float above, never mirrored and never scaled down —
+        // a far-off cow keeps a readable name tag (children's-book logic).
         if (preg)
         {
-            sb.Append("<text class=\"cow-badge\" x=\"").Append(flip ? "-24" : "24").Append("\" y=\"-30\">\U0001F930</text>");
+            sb.Append("<text class=\"cow-badge\" x=\"").Append(N((flip ? -24 : 24) * scale))
+              .Append("\" y=\"").Append(N(-30 * scale)).Append("\">\U0001F930</text>");
         }
 
         if (newborn)
         {
-            sb.Append("<text class=\"cow-spark\" x=\"0\" y=\"-46\">✨</text>");
+            sb.Append("<text class=\"cow-spark\" x=\"0\" y=\"").Append(N(-46 * scale)).Append("\">✨</text>");
         }
 
         if (showName && a.Name.Length > 0)
         {
-            sb.Append("<text class=\"cow-name\" x=\"0\" y=\"-54\">").Append(Esc(a.Name)).Append("</text>");
+            sb.Append("<text class=\"cow-name\" x=\"0\" y=\"").Append(N(-52 * scale)).Append("\">")
+              .Append(Esc(a.Name)).Append("</text>");
         }
 
-        sb.Append("</g>"); // scale
         return sb.ToString();
     }
 
